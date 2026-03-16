@@ -68,7 +68,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--data-dir", default="data", help="Path to Kaggle data directory.")
     parser.add_argument("--season-cutoff", type=int, default=2003)
     parser.add_argument("--n-trials", type=int, default=40, help="Random search trials after baseline.")
-    parser.add_argument("--seed", type=int, default=2026, help="Random seed for reproducible search.")
+    parser.add_argument("--seed", type=int, default=None, help="Random seed for reproducible search. Omit for a different sequence each run.")
     parser.add_argument("--use-gpu", action="store_true", help="Request CUDA in XGBoost.")
     parser.add_argument(
         "--require-gpu",
