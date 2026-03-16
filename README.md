@@ -14,7 +14,42 @@
 brew install libomp
 ```
 
-Now that the development environment is set up
+Now that the development environment is set up, you can start the feature search.
+
+**tune_xgb_features.py**
+
+Runs a random search over XGBoost hyperparameters and feature subsets, optimizing out-of-fold Brier score. Trial 0 is always your current baseline so you have a direct comparison. Results are saved to `tuning_results.csv`.
+
+Basic usage (CPU):
+```
+python tune_xgb_features.py --n-trials 40
+```
+
+With GPU acceleration:
+```
+python tune_xgb_features.py --n-trials 40 --use-gpu
+```
+
+Add `--require-gpu` to fail fast if CUDA is unavailable rather than silently falling back to CPU:
+```
+python tune_xgb_features.py --n-trials 40 --use-gpu --require-gpu
+```
+
+Fix the random seed to reproduce a specific search run:
+```
+python tune_xgb_features.py --n-trials 40 --seed 2026
+```
+
+Other options:
+| Flag | Default | Description |
+|---|---|---|
+| `--data-dir` | `data` | Path to the Kaggle data folder |
+| `--season-cutoff` | `2003` | Earliest season included in training |
+| `--n-trials` | `40` | Number of random trials to run after the baseline |
+| `--results-csv` | `tuning_results.csv` | Where to save the full trial log |
+| `--top-k` | `10` | How many top trials to print at the end |
+
+At the end of the run, the script prints the best feature list, hyperparameters, and `num_rounds` ready to paste directly into cells 38 and 39 of `winner-2025.ipynb`.
 
 ***The following is for post-training fun***
 
