@@ -6,7 +6,7 @@ authors = [
     {name = "Brendan LaPuma",email = "brendanlapuma@gmail.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.14"
+requires-python = ">=3.14,!=3.14.1"
 dependencies = [
     "numpy (>=2.4.2,<3.0.0)",
     "pandas (>=3.0.1,<4.0.0)",
@@ -16,7 +16,8 @@ dependencies = [
     "tqdm (>=4.67.3,<5.0.0)",
     "jinja2 (>=3.1.6,<4.0.0)",
     "scikit-learn (>=1.8.0,<2.0.0)",
-    "xgboost (>=3.2.0,<4.0.0)"
+    "xgboost (>=3.2.0,<4.0.0)",
+    "networkx (>=3.6.1,<4.0.0)"
 ]
 
 
