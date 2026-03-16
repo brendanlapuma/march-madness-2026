@@ -464,8 +464,9 @@ def evaluate_config(
 
         if local_params.get("device") == "cuda":
             # QuantileDMatrix is typically faster with hist on GPU.
-            dtrain = xgb.QuantileDMatrix(x_train, label=y_train)
-            dval = xgb.QuantileDMatrix(x_val, label=y_val)
+            qdm_max_bin = int(local_params.get("max_bin", 256))
+            dtrain = xgb.QuantileDMatrix(x_train, label=y_train, max_bin=qdm_max_bin)
+            dval = xgb.QuantileDMatrix(x_val, label=y_val, max_bin=qdm_max_bin)
         else:
             dtrain = xgb.DMatrix(x_train, label=y_train)
             dval = xgb.DMatrix(x_val, label=y_val)
@@ -477,8 +478,18 @@ def evaluate_config(
                 num_boost_round=num_rounds,
             )
         except xgb.core.XGBoostError as ex:
-            # Graceful runtime fallback if CUDA is requested but unavailable.
+            # Graceful runtime fallback only for actual CUDA availability/runtime errors.
             if local_params.get("device") == "cuda":
+                ex_text = str(ex).lower()
+                cuda_unavailable = (
+                    "cuda" in ex_text
+                    or "gpu" in ex_text
+                    or "no visible gpu" in ex_text
+                    or "invalid device ordinal" in ex_text
+                    or "not compiled with cuda" in ex_text
+                )
+                if not cuda_unavailable:
+                    raise RuntimeError(f"XGBoost training failed on GPU config: {ex}") from ex
                 if require_gpu:
                     raise RuntimeError(
                         "CUDA requested but unavailable in this run. "
