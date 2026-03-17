@@ -7,7 +7,7 @@
 3. Activate virtual environment
 - Mac: `source .venv/bin/activate`
 - PC: `.venv/scripts/activate`
-4. Print the jupyter notebook kernel to your virtual environment
+4. Add the jupyter notebook kernel to your virtual environment
 
 (mac-specific) if you get a weird python 32-bit version error, in a terminal OUTSIDE THE VIRTUAL ENVIRONMENT, run the following (and restart your vscode terminal):
 ```

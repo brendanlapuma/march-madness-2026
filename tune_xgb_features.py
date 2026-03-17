@@ -353,20 +353,39 @@ def build_modeling_frame(data_dir: str, season_cutoff: int) -> pd.DataFrame:
     return tourney_data
 
 
-def get_candidate_pool(tourney_data: pd.DataFrame) -> list[str]:
-    # Keep target/id columns out of the search space.
+def get_candidate_groups(tourney_data: pd.DataFrame) -> dict[str, list[str]]:
+    """Map group name -> list of columns. T1_/T2_ paired features are always toggled together."""
     protected = {"Season", "T1_TeamID", "T2_TeamID", "PointDiff", "win"}
-    engineered = [
-        c
-        for c in tourney_data.columns
-        if c not in protected and (c.startswith("T1_") or c.startswith("T2_") or c in {"men_women", "Seed_diff", "elo_diff", "diff_quality"})
-    ]
-    return sorted(set(engineered))
+    # These have no T1_/T2_ counterpart and are sampled individually.
+    singles = {"men_women", "Seed_diff", "elo_diff", "diff_quality"}
+
+    all_cols = {c for c in tourney_data.columns if c not in protected}
+    groups: dict[str, list[str]] = {}
+
+    for col in sorted(all_cols):
+        if col in singles:
+            groups[col] = [col]
+        elif col.startswith("T1_"):
+            base = col[3:]
+            t2_col = "T2_" + base
+            if t2_col in all_cols:
+                # Group the pair under the shared base name.
+                if base not in groups:
+                    groups[base] = [col, t2_col]
+            else:
+                groups[col] = [col]
+        elif col.startswith("T2_"):
+            base = col[3:]
+            # Only add as standalone if there is no matching T1_ column.
+            if "T1_" + base not in all_cols:
+                groups[col] = [col]
+
+    return groups
 
 
 def sample_feature_subset(
     rng: np.random.Generator,
-    candidate_pool: list[str],
+    candidate_groups: dict[str, list[str]],
     baseline_features: list[str],
     trial_idx: int,
 ) -> list[str]:
@@ -375,21 +394,26 @@ def sample_feature_subset(
         return baseline_features.copy()
 
     baseline_set = set(baseline_features)
-    chosen = []
-    for col in candidate_pool:
-        # Bias search around baseline: keep baseline cols often, add new cols occasionally.
-        if col in baseline_set:
+    chosen: list[str] = []
+
+    for group_name, group_cols in candidate_groups.items():
+        # A group is "in baseline" only if every column in it appears there.
+        in_baseline = all(c in baseline_set for c in group_cols)
+        # Bias search around baseline: keep baseline groups often, add new ones occasionally.
+        if in_baseline:
             if rng.random() < 0.80:
-                chosen.append(col)
+                chosen.extend(group_cols)
         else:
             if rng.random() < 0.15:
-                chosen.append(col)
+                chosen.extend(group_cols)
 
     # Ensure a stable minimum signal even in sparse random draws.
-    core = ["men_women", "T1_seed", "T2_seed", "Seed_diff", "T1_elo", "T2_elo", "elo_diff", "T1_quality", "T2_quality"]
-    for col in core:
-        if col in candidate_pool and col not in chosen:
-            chosen.append(col)
+    core_groups = ["seed", "elo", "quality", "men_women", "Seed_diff", "elo_diff"]
+    for group_name in core_groups:
+        if group_name in candidate_groups:
+            for col in candidate_groups[group_name]:
+                if col not in chosen:
+                    chosen.append(col)
 
     return sorted(set(chosen))
 
@@ -555,21 +579,27 @@ def main() -> None:
     tourney_data = build_modeling_frame(args.data_dir, args.season_cutoff)
     print(f"Feature engineering/load time: {time.perf_counter() - build_start:.2f}s")
 
-    candidate_pool = get_candidate_pool(tourney_data)
-    missing_baseline = [c for c in BASELINE_FEATURES if c not in candidate_pool]
+    candidate_groups = get_candidate_groups(tourney_data)
+    all_candidate_cols = [c for cols in candidate_groups.values() for c in cols]
+    missing_baseline = [c for c in BASELINE_FEATURES if c not in all_candidate_cols]
     if missing_baseline:
         raise ValueError(f"Baseline features missing from engineered frame: {missing_baseline}")
 
     print(f"Rows in tourney frame: {len(tourney_data)}")
-    print(f"Candidate feature pool size: {len(candidate_pool)}")
+    print(f"Candidate feature groups: {len(candidate_groups)} groups covering {len(all_candidate_cols)} columns")
 
     results = []
     best = None
     search_start = time.perf_counter()
 
+    # Truncate output file at run start so each run has a clean per-trial log.
+    results_path = Path(args.results_csv)
+    if results_path.exists():
+        results_path.unlink()
+
     # Trial loop includes baseline (trial 0) + user-requested random trials.
     for trial in range(args.n_trials + 1):
-        features = sample_feature_subset(rng, candidate_pool, BASELINE_FEATURES, trial)
+        features = sample_feature_subset(rng, candidate_groups, BASELINE_FEATURES, trial)
         params, num_rounds = sample_params(rng, BASELINE_PARAM, BASELINE_NUM_ROUNDS, args.use_gpu, trial)
 
         metrics = evaluate_config(tourney_data, features, params, num_rounds, args.require_gpu)
@@ -589,6 +619,8 @@ def main() -> None:
             "gpu_fallback": metrics["gpu_fallback"],
         }
         results.append(row)
+        # Persist one row immediately so interrupted runs still leave usable results.
+        pd.DataFrame([row]).to_csv(results_path, mode="a", header=(trial == 0), index=False)
 
         # Track best by global OOF Brier, which is the optimization target.
         if best is None or metrics["brier"] < best["brier"]:
