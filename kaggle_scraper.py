@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 import re
 from bs4 import BeautifulSoup
-import requests
+import cloudscraper
 from time import sleep
 
 
@@ -172,18 +172,19 @@ def parse_kenpom_table(html: str) -> pd.DataFrame:
 
 if __name__ == "__main__":
     BASE_KENPOM_URL = "https://kenpom.com/index.php?y={year}"
-    HEADERS = {
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/104.0.5112.79 Safari/537.36"
-    }
+    scraper = cloudscraper.create_scraper(browser={"browser": "chrome", "platform": "windows", "mobile": False})
     kenpom_df = pd.DataFrame()
     for year in range(2002, 2027):
         if year == 2020:
             continue
-        response = requests.get(BASE_KENPOM_URL.format(year=year), headers=HEADERS)
+        response = scraper.get(BASE_KENPOM_URL.format(year=year))
         soup = BeautifulSoup(response.text, "html.parser")
         tables = soup.find_all("table", {"id": "ratings-table"})
         if not tables:
-            print(f"No ratings table found for {year}")
+            # Diagnose: print status code and page title to understand what was returned
+            title_tag = soup.find("title")
+            title = title_tag.get_text(strip=True) if title_tag else "(no title)"
+            print(f"No ratings table found for {year} | HTTP {response.status_code} | Page title: {title}")
             continue
         year_kenpom_df = parse_kenpom_table(str(tables[0]))
         year_kenpom_df["Season"] = year
