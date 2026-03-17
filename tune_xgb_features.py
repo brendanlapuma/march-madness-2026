@@ -18,6 +18,8 @@ BASELINE_FEATURES = [
     "T1_seed",
     "T2_seed",
     "Seed_diff",
+    "T1_Rk",
+    "T2_Rk",
     "T1_avg_Score",
     "T1_avg_FGA",
     "T1_avg_OR",
@@ -165,6 +167,43 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
     # Keep the same encoding used in the notebook: 1 for men IDs that start with "1".
     output["men_women"] = output["T1_TeamID"].apply(lambda t: str(t).startswith("1")).astype(int)
     return output
+
+
+def load_kenpom_features(data_dir: str, m_teams: pd.DataFrame, w_teams: pd.DataFrame) -> pd.DataFrame:
+    """Load kenpom.csv and join with team IDs for both men and women."""
+    kenpom_path = Path(data_dir) / "kenpom.csv"
+    if not kenpom_path.exists():
+        return None
+
+    kenpom = pd.read_csv(kenpom_path)
+    # Ignore Seed/Conf and tournament flag columns.
+    drop_cols = [c for c in ["Seed", "Conf", "Tourney"] if c in kenpom.columns]
+    kenpom = kenpom.drop(columns=drop_cols, errors="ignore")
+
+    # If TeamID is already in kenpom, use it directly; otherwise join by team name.
+    if "TeamID" not in kenpom.columns:
+        # Create a normalized team name for joining.
+        m_teams_join = m_teams[["TeamID", "TeamName"]].copy()
+        m_teams_join["TeamNameNorm"] = m_teams_join["TeamName"].str.lower().str.replace(r"\s+", "", regex=True)
+        w_teams_join = w_teams[["TeamID", "TeamName"]].copy()
+        w_teams_join["TeamNameNorm"] = w_teams_join["TeamName"].str.lower().str.replace(r"\s+", "", regex=True)
+
+        kenpom["TeamNorm"] = kenpom["Team"].str.lower().str.replace(r"\s+", "", regex=True)
+        kenpom_m = pd.merge(kenpom, m_teams_join[["TeamID", "TeamNameNorm"]], left_on="TeamNorm", right_on="TeamNameNorm", how="left")
+        kenpom_w = pd.merge(kenpom, w_teams_join[["TeamID", "TeamNameNorm"]], left_on="TeamNorm", right_on="TeamNameNorm", how="left")
+        kenpom_m = kenpom_m.dropna(subset=["TeamID"])
+        kenpom_w = kenpom_w.dropna(subset=["TeamID"])
+        kenpom = pd.concat([kenpom_m, kenpom_w], ignore_index=True)
+
+    kenpom = kenpom.dropna(subset=["Season", "TeamID"])
+    kenpom["TeamID"] = kenpom["TeamID"].astype(int)
+    kenpom["Season"] = kenpom["Season"].astype(int)
+
+    # Select numerical features only (exclude Team, Tourney identifiers, and key columns)
+    feature_cols = [c for c in kenpom.columns if c not in ["Season", "TeamID"] and kenpom[c].dtype in ["int64", "float64"]]
+    kenpom = kenpom[["Season", "TeamID"] + feature_cols].copy()
+
+    return kenpom
 
 
 def expected_result(elo_a: float, elo_b: float, elo_width: float) -> float:
@@ -349,6 +388,24 @@ def build_modeling_frame(data_dir: str, season_cutoff: int) -> pd.DataFrame:
     tourney_data = pd.merge(tourney_data, glm_quality_t1, on=["Season", "T1_TeamID"], how="left")
     tourney_data = pd.merge(tourney_data, glm_quality_t2, on=["Season", "T2_TeamID"], how="left")
     tourney_data["diff_quality"] = tourney_data["T1_quality"] - tourney_data["T2_quality"]
+
+    # Load and merge kenpom features.
+    m_teams = pd.read_csv(data_path / "MTeams.csv")
+    w_teams = pd.read_csv(data_path / "WTeams.csv")
+    kenpom = load_kenpom_features(data_dir, m_teams, w_teams)
+    if kenpom is not None:
+        # Build rename dicts that preserve Season column
+        kenpom_feature_cols = [c for c in kenpom.columns if c not in ["Season", "TeamID"]]
+        rename_dict_t1 = {c: f"T1_{c}" for c in kenpom_feature_cols}
+        rename_dict_t1["TeamID"] = "T1_TeamID"
+        kenpom_t1 = kenpom.rename(columns=rename_dict_t1)
+        
+        rename_dict_t2 = {c: f"T2_{c}" for c in kenpom_feature_cols}
+        rename_dict_t2["TeamID"] = "T2_TeamID"
+        kenpom_t2 = kenpom.rename(columns=rename_dict_t2)
+        
+        tourney_data = pd.merge(tourney_data, kenpom_t1, on=["Season", "T1_TeamID"], how="left")
+        tourney_data = pd.merge(tourney_data, kenpom_t2, on=["Season", "T2_TeamID"], how="left")
 
     return tourney_data
 
