@@ -14,7 +14,11 @@
 brew install libomp
 ```
 
-Now that the development environment is set up, you can start the feature search.
+Now that the development environment is set up, you can get going with the data ingestion.
+
+**kaggle_scraper.py**
+
+Web-scrapes the kenpom website for additional features, saves to a csv within the data directory.
 
 **tune_xgb_features.py**
 
