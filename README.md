@@ -18,7 +18,7 @@ Now that the development environment is set up, you can start the feature search
 
 **tune_xgb_features.py**
 
-Runs a random search over XGBoost hyperparameters and feature subsets, optimizing out-of-fold Brier score. Trial 0 is always your current baseline so you have a direct comparison. Results are saved to `tuning_results.csv`.
+Runs a random search over XGBoost hyperparameters and feature subsets, optimizing out-of-fold Brier score. Trial 0 is always the current baseline so you have a direct comparison. Results are saved to `tuning_results.csv`.
 
 Basic usage (CPU):
 ```
@@ -49,16 +49,16 @@ Other options:
 | `--results-csv` | `tuning_results.csv` | Where to save the full trial log |
 | `--top-k` | `10` | How many top trials to print at the end |
 
-At the end of the run, the script prints the best feature list, hyperparameters, and `num_rounds` ready to paste directly into cells 38 and 39 of `winner-2025.ipynb`.
+At the end of the run, the script prints the best feature list, hyperparameters, and `num_rounds` ready to paste directly into cells 38 and 39 of `2026_notebook.ipynb`.
 
-***The following is for post-training fun***
+**2026_notebook.ipynb**
 
-**2025_notebook.ipynb**
-
-- 2025_notebook contains the current strategy, heavily based on the 2023 winner's gradient-boosted random forest
+- 2026_notebook contains the current strategy, heavily based on the 2023 winner's gradient-boosted random forest
 - Make sure to skim the notebook and update years where necessary (find the 2025s and change to the updated year, etc).
 - If data formatting gets changed by Kaggle, this will break.
 - Just running this file is sufficient for creating a kaggle-style submission for the march machine learning mania competition (as of 2025)
+
+***The following is for post-training fun***
 
 **simulate_n_brackets.ipynb**
 
