@@ -352,7 +352,7 @@ def build_modeling_frame(data_dir: str, season_cutoff: int) -> pd.DataFrame:
     )
 
     dt = regular_data.loc[regular_data["ST1"].isin(st) | regular_data["ST2"].isin(st)].copy()
-    dt["T1_TeamID"] = dt["T1_TeamID"].astype(str)
+    dt["T1_TeamID"] = dt["T1_TeamID"].castype(str)
     dt["T2_TeamID"] = dt["T2_TeamID"].astype(str)
     dt.loc[~dt["ST1"].isin(st), "T1_TeamID"] = "0000"
     dt.loc[~dt["ST2"].isin(st), "T2_TeamID"] = "0000"
