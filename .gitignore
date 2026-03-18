@@ -1,7 +1,11 @@
 # project-specific stuff
+.claude/
+CLAUDE.md
 data/
 *.csv
 *.png
+.DS_Store
+.vscode/settings.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

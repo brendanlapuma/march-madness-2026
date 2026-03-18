@@ -18,8 +18,6 @@ BASELINE_FEATURES = [
     "T1_seed",
     "T2_seed",
     "Seed_diff",
-    "T1_Rk",
-    "T2_Rk",
     "T1_avg_Score",
     "T1_avg_FGA",
     "T1_avg_OR",
@@ -45,6 +43,12 @@ BASELINE_FEATURES = [
     "elo_diff",
     "T1_quality",
     "T2_quality",
+    "T1_Rk",
+    "T2_Rk",
+    "T1_W",
+    "T2_W",
+    "T1_L",
+    "T2_L",
 ]
 
 BASELINE_PARAM = {
@@ -170,15 +174,12 @@ def prepare_data(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def load_kenpom_features(data_dir: str, m_teams: pd.DataFrame, w_teams: pd.DataFrame) -> pd.DataFrame:
-    """Load kenpom.csv and join with team IDs for both men and women."""
-    kenpom_path = Path(data_dir) / "kenpom.csv"
+    """Load kenpom_pretourney.csv and join with team IDs for both men and women."""
+    kenpom_path = Path(data_dir) / "kenpom_pretourney.csv"
     if not kenpom_path.exists():
         return None
 
     kenpom = pd.read_csv(kenpom_path)
-    # Ignore Seed/Conf and tournament flag columns.
-    drop_cols = [c for c in ["Seed", "Conf", "Tourney"] if c in kenpom.columns]
-    kenpom = kenpom.drop(columns=drop_cols, errors="ignore")
 
     # If TeamID is already in kenpom, use it directly; otherwise join by team name.
     if "TeamID" not in kenpom.columns:
