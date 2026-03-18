@@ -15,8 +15,8 @@ from sklearn.metrics import brier_score_loss, mean_absolute_error
 
 BASELINE_FEATURES = [
     "men_women",
-    "T1_seed",
-    "T2_seed",
+    # "T1_seed",
+    # "T2_seed",
     "Seed_diff",
     "T1_avg_Score",
     "T1_avg_FGA",
@@ -45,10 +45,10 @@ BASELINE_FEATURES = [
     "T2_quality",
     "T1_Rk",
     "T2_Rk",
-    "T1_W",
-    "T2_W",
-    "T1_L",
-    "T2_L",
+    # "T1_W",
+    # "T2_W",
+    # "T1_L",
+    # "T2_L",
 ]
 
 BASELINE_PARAM = {

@@ -16,9 +16,9 @@ brew install libomp
 
 Now that the development environment is set up, you can get going with the data ingestion.
 
-**kaggle_scraper.py**
+**kaggle_scraper_noleak.py**
 
-Web-scrapes the kenpom website for additional features, saves to a csv within the data directory.
+Web-scrapes the kenpom website for additional features, saves to a csv within the data directory. Specifically retrieves pre-tournament kenpom stats to avoid training leakage. 
 
 **tune_xgb_features.py**
 
